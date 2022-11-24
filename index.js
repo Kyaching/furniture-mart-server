@@ -29,6 +29,7 @@ async function connectDB() {
 connectDB();
 
 const usersCollection = client.db("esell").collection("users");
+const productsCollection = client.db("esell").collection("products");
 
 app.post("/users", async (req, res) => {
   try {
@@ -43,6 +44,56 @@ app.post("/users", async (req, res) => {
     res.send({
       status: false,
       message: `Insertion error occurred ${err}`,
+    });
+  }
+});
+
+app.get("/users/:email", async (req, res) => {
+  try {
+    const email = req.params.email;
+    const result = await usersCollection.findOne({email});
+    res.send({
+      status: true,
+      message: "Successfully data added",
+      data: result,
+    });
+  } catch (err) {
+    res.send({
+      status: false,
+      message: `Not get data ${err}`,
+    });
+  }
+});
+
+app.post("/products", async (req, res) => {
+  try {
+    const user = req.body;
+    const result = await productsCollection.insertOne(user);
+    res.send({
+      status: true,
+      message: "Successfully data added",
+      data: result,
+    });
+  } catch (err) {
+    res.send({
+      status: false,
+      message: `Insertion error occurred ${err}`,
+    });
+  }
+});
+app.get("/products", async (req, res) => {
+  try {
+    const cursor = productsCollection.find({});
+    const result = await cursor.toArray();
+    res.send({
+      status: true,
+      message: "Successfully got data",
+      data: result,
+    });
+  } catch (err) {
+    res.send({
+      status: false,
+      message: `Not get data ${err}`,
     });
   }
 });
