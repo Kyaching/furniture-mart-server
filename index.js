@@ -28,8 +28,26 @@ async function connectDB() {
 }
 connectDB();
 
+const categoriesCollection = client.db("esell").collection("categories");
 const usersCollection = client.db("esell").collection("users");
 const productsCollection = client.db("esell").collection("products");
+
+app.get("/categories", async (req, res) => {
+  try {
+    const cursor = categoriesCollection.find({});
+    const result = await cursor.toArray();
+    res.send({
+      status: true,
+      message: "Successfully got data",
+      data: result,
+    });
+  } catch (err) {
+    res.send({
+      status: false,
+      message: `Not get data ${err}`,
+    });
+  }
+});
 
 app.post("/users", async (req, res) => {
   try {
@@ -84,6 +102,26 @@ app.post("/products", async (req, res) => {
 app.get("/products", async (req, res) => {
   try {
     const cursor = productsCollection.find({});
+    const result = await cursor.toArray();
+    res.send({
+      status: true,
+      message: "Successfully got data",
+      data: result,
+    });
+  } catch (err) {
+    res.send({
+      status: false,
+      message: `Not get data ${err}`,
+    });
+  }
+});
+app.get("/products/:categoryName", async (req, res) => {
+  try {
+    const name = req.params.categoryName;
+    const filter = {
+      productCategory: name,
+    };
+    const cursor = productsCollection.find(filter);
     const result = await cursor.toArray();
     res.send({
       status: true,
