@@ -1,4 +1,4 @@
-const {MongoClient, ServerApiVersion} = require("mongodb");
+const {MongoClient, ServerApiVersion, ObjectId} = require("mongodb");
 const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
@@ -32,6 +32,7 @@ const categoriesCollection = client.db("esell").collection("categories");
 const usersCollection = client.db("esell").collection("users");
 const productsCollection = client.db("esell").collection("products");
 const bookingsCollection = client.db("esell").collection("bookings");
+const reportsCollection = client.db("esell").collection("reports");
 
 // categories
 app.get("/categories", async (req, res) => {
@@ -52,9 +53,29 @@ app.get("/categories", async (req, res) => {
 });
 
 // users
+
 app.get("/users", async (req, res) => {
   try {
     const cursor = usersCollection.find({});
+    const result = await cursor.toArray();
+    res.send({
+      status: true,
+      message: "Successfully got data",
+      data: result,
+    });
+  } catch (err) {
+    res.send({
+      status: false,
+      message: `Not get data ${err}`,
+    });
+  }
+});
+
+app.get("/v2/users/:role", async (req, res) => {
+  try {
+    const role = req.params.role;
+
+    const cursor = usersCollection.find({role});
     const result = await cursor.toArray();
     res.send({
       status: true,
@@ -99,6 +120,24 @@ app.get("/users/:email", async (req, res) => {
     res.send({
       status: false,
       message: `Not get data ${err}`,
+    });
+  }
+});
+
+app.delete("/users/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+    const user = {_id: ObjectId(id)};
+    const result = await usersCollection.deleteOne(user);
+    res.send({
+      status: true,
+      message: "Deleted Data Successfully",
+      data: result,
+    });
+  } catch (err) {
+    res.send({
+      status: false,
+      message: `Sorry something is wrong${err}`,
     });
   }
 });
@@ -166,6 +205,24 @@ app.post("/bookings", async (req, res) => {
     res.send({
       status: true,
       message: "Successfully data added",
+      data: result,
+    });
+  } catch (err) {
+    res.send({
+      status: false,
+      message: `Insertion error occurred ${err}`,
+    });
+  }
+});
+
+// reports
+app.post("/reports", async (req, res) => {
+  try {
+    const product = req.body;
+    const result = await reportsCollection.insertOne(product);
+    res.send({
+      status: true,
+      message: `You reported product successfully`,
       data: result,
     });
   } catch (err) {
