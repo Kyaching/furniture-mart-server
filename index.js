@@ -31,10 +31,30 @@ connectDB();
 const categoriesCollection = client.db("esell").collection("categories");
 const usersCollection = client.db("esell").collection("users");
 const productsCollection = client.db("esell").collection("products");
+const bookingsCollection = client.db("esell").collection("bookings");
 
+// categories
 app.get("/categories", async (req, res) => {
   try {
     const cursor = categoriesCollection.find({});
+    const result = await cursor.toArray();
+    res.send({
+      status: true,
+      message: "Successfully got data",
+      data: result,
+    });
+  } catch (err) {
+    res.send({
+      status: false,
+      message: `Not get data ${err}`,
+    });
+  }
+});
+
+// users
+app.get("/users", async (req, res) => {
+  try {
+    const cursor = usersCollection.find({});
     const result = await cursor.toArray();
     res.send({
       status: true,
@@ -83,6 +103,7 @@ app.get("/users/:email", async (req, res) => {
   }
 });
 
+// products
 app.post("/products", async (req, res) => {
   try {
     const user = req.body;
@@ -132,6 +153,25 @@ app.get("/products/:categoryName", async (req, res) => {
     res.send({
       status: false,
       message: `Not get data ${err}`,
+    });
+  }
+});
+
+// bookings
+
+app.post("/bookings", async (req, res) => {
+  try {
+    const product = req.body;
+    const result = await bookingsCollection.insertOne(product);
+    res.send({
+      status: true,
+      message: "Successfully data added",
+      data: result,
+    });
+  } catch (err) {
+    res.send({
+      status: false,
+      message: `Insertion error occurred ${err}`,
     });
   }
 });
