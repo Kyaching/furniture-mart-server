@@ -3,6 +3,7 @@ const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
 const jwt = require("jsonwebtoken");
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
 const app = express();
 
@@ -35,6 +36,7 @@ const productsCollection = client.db("esell").collection("products");
 const bookingsCollection = client.db("esell").collection("bookings");
 const reportsCollection = client.db("esell").collection("reports");
 const advertiseCollection = client.db("esell").collection("advertises");
+const paymentsCollection = client.db("esell").collection("payments");
 
 // jwt token
 app.get("/jwt", async (req, res) => {
@@ -282,6 +284,40 @@ app.delete("/products/:id", async (req, res) => {
 
 // bookings
 
+app.get("/bookings", async (req, res) => {
+  try {
+    const cursor = bookingsCollection.find({});
+    const result = await cursor.toArray();
+    res.send({
+      status: true,
+      message: "Successfully got data",
+      data: result,
+    });
+  } catch (err) {
+    res.send({
+      status: false,
+      message: `Not get data ${err}`,
+    });
+  }
+});
+app.get("/bookings/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+    const query = {_id: ObjectId(id)};
+    const result = await bookingsCollection.findOne(query);
+    res.send({
+      status: true,
+      message: "Successfully data added",
+      data: result,
+    });
+  } catch (err) {
+    res.send({
+      status: false,
+      message: `Not get data ${err}`,
+    });
+  }
+});
+
 app.post("/bookings", async (req, res) => {
   try {
     const product = req.body;
@@ -299,6 +335,39 @@ app.post("/bookings", async (req, res) => {
   }
 });
 
+// Payment intent Stripe
+
+app.post("/create-payment-intent", async (req, res) => {
+  const price = req.body.price;
+  const amount = parseFloat(price) * 100;
+  try {
+    const paymentIntent = await stripe.paymentIntents.create({
+      currency: "usd",
+      amount: amount,
+      payment_method_types: ["card"],
+    });
+    res.send({
+      clientSecret: paymentIntent.client_secret,
+    });
+  } catch {}
+});
+
+//payment
+app.post("/payments", async (req, res) => {
+  const payment = req.body;
+  console.log(payment);
+  const result = await paymentsCollection.insertOne(payment);
+  const id = payment.buyerId;
+  const filter = {_id: ObjectId(id)};
+  const updatedDoc = {
+    $set: {
+      paid: true,
+      transactionId: payment.transactionId,
+    },
+  };
+  const updatedResult = await bookingsCollection.updateOne(filter, updatedDoc);
+  res.send(result);
+});
 // reports
 app.get("/reports", async (req, res) => {
   try {
