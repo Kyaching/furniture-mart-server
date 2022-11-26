@@ -2,6 +2,7 @@ const {MongoClient, ServerApiVersion, ObjectId} = require("mongodb");
 const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
+const jwt = require("jsonwebtoken");
 
 const app = express();
 
@@ -33,7 +34,22 @@ const usersCollection = client.db("esell").collection("users");
 const productsCollection = client.db("esell").collection("products");
 const bookingsCollection = client.db("esell").collection("bookings");
 const reportsCollection = client.db("esell").collection("reports");
+const advertiseCollection = client.db("esell").collection("advertises");
 
+// jwt token
+app.get("/jwt", async (req, res) => {
+  const email = req.query.email;
+  const query = {email};
+  const user = await usersCollection.findOne(query);
+  console.log(user);
+  if (user) {
+    const token = jwt.sign({email}, process.env.ACCESS_TOKEN, {
+      expiresIn: "2d",
+    });
+    return res.send({accessToken: token});
+  }
+  res.status(403).send({accessToken: ""});
+});
 // categories
 app.get("/categories", async (req, res) => {
   try {
@@ -161,6 +177,7 @@ app.post("/products", async (req, res) => {
 });
 app.get("/products", async (req, res) => {
   try {
+    // const query = {year: "qq"};
     const cursor = productsCollection.find({});
     const result = await cursor.toArray();
     res.send({
@@ -175,12 +192,62 @@ app.get("/products", async (req, res) => {
     });
   }
 });
+// app.get("/v2/products/:report", async (req, res) => {
+//   try {
+//     const name = req.params.report;
+//     console.log(name);
+//     const filter = {
+//       reported: name,
+//     };
+//     const cursor = productsCollection.find(filter);
+//     const result = await cursor.toArray();
+//     res.send({
+//       status: true,
+//       message: "Successfully got data",
+//       data: result,
+//     });
+//   } catch (err) {
+//     res.send({
+//       status: false,
+//       message: `Not get data ${err}`,
+//     });
+//   }
+// });
+app.put("/products/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+    const product = {_id: ObjectId(id)};
+    const options = {upsert: true};
+    const updatedDoc = {
+      $set: {
+        reported: "reported",
+      },
+    };
+    const result = await productsCollection.updateOne(
+      product,
+      updatedDoc,
+      options
+    );
+    res.send({
+      status: true,
+      message: "Successfully reported data",
+      data: result,
+    });
+  } catch (err) {
+    res.send({
+      status: false,
+      message: `Insertion error occurred ${err}`,
+    });
+  }
+});
 app.get("/products/:categoryName", async (req, res) => {
   try {
-    const name = req.params.categoryName;
+    const query = req.params.categoryName;
+
     const filter = {
-      productCategory: name,
+      productCategory: query,
     };
+
     const cursor = productsCollection.find(filter);
     const result = await cursor.toArray();
     res.send({
@@ -192,6 +259,23 @@ app.get("/products/:categoryName", async (req, res) => {
     res.send({
       status: false,
       message: `Not get data ${err}`,
+    });
+  }
+});
+app.delete("/products/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+    const product = {_id: ObjectId(id)};
+    const result = await usersCollection.deleteOne(product);
+    res.send({
+      status: true,
+      message: "Deleted Data Successfully",
+      data: result,
+    });
+  } catch (err) {
+    res.send({
+      status: false,
+      message: `Sorry something is wrong${err}`,
     });
   }
 });
@@ -216,6 +300,23 @@ app.post("/bookings", async (req, res) => {
 });
 
 // reports
+app.get("/reports", async (req, res) => {
+  try {
+    const cursor = reportsCollection.find({});
+    const result = await cursor.toArray();
+    res.send({
+      status: true,
+      message: "Successfully got data",
+      data: result,
+    });
+  } catch (err) {
+    res.send({
+      status: false,
+      message: `Not get data ${err}`,
+    });
+  }
+});
+
 app.post("/reports", async (req, res) => {
   try {
     const product = req.body;
@@ -223,6 +324,58 @@ app.post("/reports", async (req, res) => {
     res.send({
       status: true,
       message: `You reported product successfully`,
+      data: result,
+    });
+  } catch (err) {
+    res.send({
+      status: false,
+      message: `Insertion error occurred ${err}`,
+    });
+  }
+});
+app.delete("/reports/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+    const product = {_id: ObjectId(id)};
+    const result = await reportsCollection.deleteOne(product);
+    res.send({
+      status: true,
+      message: "Deleted Data Successfully",
+      data: result,
+    });
+  } catch (err) {
+    res.send({
+      status: false,
+      message: `Sorry something is wrong${err}`,
+    });
+  }
+});
+
+// advertisement
+app.get("/advertises", async (req, res) => {
+  try {
+    const cursor = advertiseCollection.find({});
+    const result = await cursor.toArray();
+    res.send({
+      status: true,
+      message: "Successfully got data",
+      data: result,
+    });
+  } catch (err) {
+    res.send({
+      status: false,
+      message: `Not get data ${err}`,
+    });
+  }
+});
+
+app.post("/advertises", async (req, res) => {
+  try {
+    const product = req.body;
+    const result = await advertiseCollection.insertOne(product);
+    res.send({
+      status: true,
+      message: `You added product successfully`,
       data: result,
     });
   } catch (err) {
