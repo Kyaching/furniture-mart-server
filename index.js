@@ -38,14 +38,29 @@ const reportsCollection = client.db("esell").collection("reports");
 const advertiseCollection = client.db("esell").collection("advertises");
 const paymentsCollection = client.db("esell").collection("payments");
 
+function verifyJwtToken(req, res, next) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) {
+    return res.status(401).send({message: "unauthorized access"});
+  }
+
+  const token = authHeader.split(" ")[1];
+  jwt.verify(token, process.env.SECRET_TOKEN, function (err, decoded) {
+    if (err) {
+      return res.status(403).send({message: "forbidden access"});
+    }
+    req.decoded = decoded;
+    next();
+  });
+}
+
 // jwt token
 app.get("/jwt", async (req, res) => {
   const email = req.query.email;
   const query = {email};
   const user = await usersCollection.findOne(query);
-  console.log(user);
   if (user) {
-    const token = jwt.sign({email}, process.env.ACCESS_TOKEN, {
+    const token = jwt.sign({email}, process.env.SECRET_TOKEN, {
       expiresIn: "2d",
     });
     return res.send({accessToken: token});
@@ -264,9 +279,17 @@ app.delete("/products/:id", async (req, res) => {
 
 // bookings
 
-app.get("/bookings", async (req, res) => {
+app.get("/bookings", verifyJwtToken, async (req, res) => {
   try {
-    const cursor = bookingsCollection.find({});
+    const email = req.query.email;
+    const decodedEmail = req.decoded.email;
+
+    if (email !== decodedEmail) {
+      return res.status(403).send({message: "forbidden access"});
+    }
+    const query = {buyerEmail: email};
+    console.log(query);
+    const cursor = bookingsCollection.find(query);
     const result = await cursor.toArray();
     res.send({
       status: true,
@@ -414,23 +437,10 @@ app.delete("/reports/:id", async (req, res) => {
 });
 
 // advertisement
-app.get("/advertises", async (req, res) => {
+app.get("/advertises", verifyJwtToken, async (req, res) => {
   try {
-    const query = {paid: true};
     const cursor = advertiseCollection.find({paid: {$ne: true}});
     const result = await cursor.toArray();
-    // results.filter()
-    // const result = await advertiseCollection.aggregate([
-    //   {
-    //     $project: {
-    //       $filter: {
-    //         input: "advertises",
-    //         as: "items",
-    //         cond: {$ne: true},
-    //       },
-    //     },
-    //   },
-    // ]);
     res.send({
       status: true,
       message: "Successfully got data",
