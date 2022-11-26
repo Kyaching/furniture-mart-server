@@ -179,8 +179,7 @@ app.post("/products", async (req, res) => {
 });
 app.get("/products", async (req, res) => {
   try {
-    // const query = {year: "qq"};
-    const cursor = productsCollection.find({});
+    const cursor = productsCollection.find({paid: {$ne: true}});
     const result = await cursor.toArray();
     res.send({
       status: true,
@@ -194,27 +193,7 @@ app.get("/products", async (req, res) => {
     });
   }
 });
-// app.get("/v2/products/:report", async (req, res) => {
-//   try {
-//     const name = req.params.report;
-//     console.log(name);
-//     const filter = {
-//       reported: name,
-//     };
-//     const cursor = productsCollection.find(filter);
-//     const result = await cursor.toArray();
-//     res.send({
-//       status: true,
-//       message: "Successfully got data",
-//       data: result,
-//     });
-//   } catch (err) {
-//     res.send({
-//       status: false,
-//       message: `Not get data ${err}`,
-//     });
-//   }
-// });
+
 app.put("/products/:id", async (req, res) => {
   try {
     const id = req.params.id;
@@ -248,6 +227,7 @@ app.get("/products/:categoryName", async (req, res) => {
 
     const filter = {
       productCategory: query,
+      paid: {$ne: true},
     };
 
     const cursor = productsCollection.find(filter);
@@ -358,7 +338,12 @@ app.post("/payments", async (req, res) => {
   console.log(payment);
   const result = await paymentsCollection.insertOne(payment);
   const id = payment.buyerId;
+  const productId = payment.productId;
+
   const filter = {_id: ObjectId(id)};
+  const adFilter = {_id: productId};
+  const productsFilter = {_id: ObjectId(productId)};
+  console.log(productsFilter);
   const updatedDoc = {
     $set: {
       paid: true,
@@ -366,6 +351,14 @@ app.post("/payments", async (req, res) => {
     },
   };
   const updatedResult = await bookingsCollection.updateOne(filter, updatedDoc);
+  const updateAdvertise = await advertiseCollection.updateOne(
+    adFilter,
+    updatedDoc
+  );
+  const updateProducts = await productsCollection.updateOne(
+    productsFilter,
+    updatedDoc
+  );
   res.send(result);
 });
 // reports
@@ -423,8 +416,21 @@ app.delete("/reports/:id", async (req, res) => {
 // advertisement
 app.get("/advertises", async (req, res) => {
   try {
-    const cursor = advertiseCollection.find({});
+    const query = {paid: true};
+    const cursor = advertiseCollection.find({paid: {$ne: true}});
     const result = await cursor.toArray();
+    // results.filter()
+    // const result = await advertiseCollection.aggregate([
+    //   {
+    //     $project: {
+    //       $filter: {
+    //         input: "advertises",
+    //         as: "items",
+    //         cond: {$ne: true},
+    //       },
+    //     },
+    //   },
+    // ]);
     res.send({
       status: true,
       message: "Successfully got data",
