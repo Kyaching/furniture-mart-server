@@ -139,6 +139,41 @@ app.post("/users", async (req, res) => {
     });
   }
 });
+app.put("/users/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+    const email = req.body;
+    console.log(email.sellerEmail);
+    const user = {_id: ObjectId(id)};
+    const filter = {userEmail: email.sellerEmail};
+    const options = {upsert: true};
+    const updatedUser = {
+      $set: {
+        verified: true,
+      },
+    };
+    const updateProduct = {
+      $set: {
+        verified: true,
+      },
+    };
+    const result = await usersCollection.updateOne(user, updatedUser, options);
+    const updatedProduct = await productsCollection.updateOne(
+      filter,
+      updateProduct
+    );
+    res.send({
+      status: true,
+      message: "Successfully reported data",
+      data: result,
+    });
+  } catch (err) {
+    res.send({
+      status: false,
+      message: `Insertion error occurred ${err}`,
+    });
+  }
+});
 
 app.get("/users/:email", async (req, res) => {
   try {
