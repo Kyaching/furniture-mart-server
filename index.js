@@ -106,28 +106,10 @@ app.get("/users", verifyJwtToken, async (req, res) => {
   }
 });
 
-app.get("/v2/users/:role", async (req, res) => {
-  try {
-    const role = req.params.role;
-
-    const cursor = usersCollection.find({role});
-    const result = await cursor.toArray();
-    res.send({
-      status: true,
-      message: "Successfully got data",
-      data: result,
-    });
-  } catch (err) {
-    res.send({
-      status: false,
-      message: `Not get data ${err}`,
-    });
-  }
-});
-
 app.post("/users", async (req, res) => {
   try {
     const user = req.body;
+    console.log(user);
     const result = await usersCollection.insertOne(user);
     res.send({
       status: true,
