@@ -25,7 +25,7 @@ async function connectDB() {
   try {
     client.connect();
   } catch (err) {
-    console.log("error occurred", err);
+    res.send({message: err});
   }
 }
 connectDB();
@@ -61,7 +61,7 @@ app.get("/jwt", async (req, res) => {
   const user = await usersCollection.findOne(query);
   if (user) {
     const token = jwt.sign({email}, process.env.SECRET_TOKEN, {
-      expiresIn: "2d",
+      expiresIn: "11d",
     });
     return res.send({accessToken: token});
   }
@@ -87,9 +87,11 @@ app.get("/categories", async (req, res) => {
 
 // users
 
-app.get("/users", async (req, res) => {
+app.get("/users", verifyJwtToken, async (req, res) => {
   try {
-    const cursor = usersCollection.find({});
+    const role = req.query.role;
+    const query = {role: role};
+    const cursor = usersCollection.find(query);
     const result = await cursor.toArray();
     res.send({
       status: true,
@@ -143,7 +145,6 @@ app.put("/users/:id", async (req, res) => {
   try {
     const id = req.params.id;
     const email = req.body;
-    console.log(email.sellerEmail);
     const user = {_id: ObjectId(id)};
     const filter = {userEmail: email.sellerEmail};
     const options = {upsert: true};
@@ -175,7 +176,7 @@ app.put("/users/:id", async (req, res) => {
   }
 });
 
-app.get("/users/:email", async (req, res) => {
+app.get("/users/:email", verifyJwtToken, async (req, res) => {
   try {
     const email = req.params.email;
     const result = await usersCollection.findOne({email});
@@ -227,9 +228,17 @@ app.post("/products", async (req, res) => {
     });
   }
 });
-app.get("/products", async (req, res) => {
+app.get("/products", verifyJwtToken, async (req, res) => {
   try {
-    const cursor = productsCollection.find({paid: {$ne: true}});
+    let query = {};
+    const email = req.query.email;
+    if (email) {
+      query = {
+        userEmail: email,
+      };
+    }
+
+    const cursor = productsCollection.find(query);
     const result = await cursor.toArray();
     res.send({
       status: true,
@@ -271,7 +280,7 @@ app.put("/products/:id", async (req, res) => {
     });
   }
 });
-app.get("/products/:categoryName", async (req, res) => {
+app.get("/products/:categoryName", verifyJwtToken, async (req, res) => {
   try {
     const query = req.params.categoryName;
 
@@ -298,7 +307,7 @@ app.delete("/products/:id", async (req, res) => {
   try {
     const id = req.params.id;
     const product = {_id: ObjectId(id)};
-    const result = await usersCollection.deleteOne(product);
+    const result = await productsCollection.deleteOne(product);
     res.send({
       status: true,
       message: "Deleted Data Successfully",
@@ -323,7 +332,6 @@ app.get("/bookings", verifyJwtToken, async (req, res) => {
       return res.status(403).send({message: "forbidden access"});
     }
     const query = {buyerEmail: email};
-    console.log(query);
     const cursor = bookingsCollection.find(query);
     const result = await cursor.toArray();
     res.send({
@@ -338,7 +346,7 @@ app.get("/bookings", verifyJwtToken, async (req, res) => {
     });
   }
 });
-app.get("/bookings/:id", async (req, res) => {
+app.get("/bookings/:id", verifyJwtToken, async (req, res) => {
   try {
     const id = req.params.id;
     const query = {_id: ObjectId(id)};
@@ -393,7 +401,6 @@ app.post("/create-payment-intent", async (req, res) => {
 //payment
 app.post("/payments", async (req, res) => {
   const payment = req.body;
-  console.log(payment);
   const result = await paymentsCollection.insertOne(payment);
   const id = payment.buyerId;
   const productId = payment.productId;
@@ -401,7 +408,6 @@ app.post("/payments", async (req, res) => {
   const filter = {_id: ObjectId(id)};
   const adFilter = {_id: productId};
   const productsFilter = {_id: ObjectId(productId)};
-  console.log(productsFilter);
   const updatedDoc = {
     $set: {
       paid: true,
@@ -420,7 +426,7 @@ app.post("/payments", async (req, res) => {
   res.send(result);
 });
 // reports
-app.get("/reports", async (req, res) => {
+app.get("/reports", verifyJwtToken, async (req, res) => {
   try {
     const cursor = reportsCollection.find({});
     const result = await cursor.toArray();
@@ -492,7 +498,17 @@ app.get("/advertises", verifyJwtToken, async (req, res) => {
 app.post("/advertises", async (req, res) => {
   try {
     const product = req.body;
+    const id = req.body._id;
+    const filter = {_id: ObjectId(id)};
+    console.log(filter);
+    const updateDoc = {
+      $set: {
+        advertise: true,
+      },
+    };
     const result = await advertiseCollection.insertOne(product);
+
+    const updateProduct = await productsCollection.updateOne(filter, updateDoc);
     res.send({
       status: true,
       message: `You added product successfully`,
